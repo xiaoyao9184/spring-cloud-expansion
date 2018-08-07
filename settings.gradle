@@ -1,0 +1,6 @@
+include 'zuul-basic-authentication'
+include 'sample-zuul-basic-authentication'
+
+rootProject.name = "${projectName}"
+project(":sample-zuul-basic-authentication").projectDir = new File("samples/zuul-basic/zuul-gateway")
+

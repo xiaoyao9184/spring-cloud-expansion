@@ -1,0 +1,33 @@
+debug: true
+
+server:
+  port: 8081
+
+security:
+  basic:
+    enabled: false
+
+zuul:
+  routes:
+    hub:
+      path: /gayhub/**
+      url: http://www.github.com
+    httpbin:
+      path: /httpbin/**
+      url: http://httpbin.org
+
+proxy:
+  auth:
+    routes:
+      hub: none
+      httpbin: basic
+    basics:
+      httpbin:
+        username: name
+        password: "**password**"
+
+logging:
+  level:
+#    ROOT: DEBUG
+    org.springframework: DEBUG
+    org.springframework.security: DEBUG

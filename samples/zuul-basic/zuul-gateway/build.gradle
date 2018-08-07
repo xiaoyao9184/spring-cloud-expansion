@@ -1,0 +1,41 @@
+group = 'com.github.xiaoyao9184'
+version = "0.1-SNAPSHOT"
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'propdeps'
+apply plugin: "io.spring.dependency-management"
+apply plugin: 'net.researchgate.release'
+apply plugin: 'com.github.ksoichiro.build.info'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+        mavenBom "org.springframework.security:spring-security-bom:${springSecurityVersion}"
+    }
+    resolutionStrategy {
+        cacheChangingModulesFor 0, 'seconds'
+    }
+}
+
+dependencies {
+    runtime 'org.springframework.boot:spring-boot-devtools'
+
+    //Cloud
+    compile 'org.springframework.cloud:spring-cloud-starter-zuul'
+    compile 'org.springframework.cloud:spring-cloud-starter-oauth2'
+    //SecurityOAuth
+    compile "org.springframework.security.oauth:spring-security-oauth2:${springSecurityOauth2Version}"
+    //Boot
+    compile 'org.springframework.boot:spring-boot-starter-web'
+    compile 'org.springframework.boot:spring-boot-starter-security'
+
+    //mock
+    compile(project(':zuul-basic-authentication'))
+
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+}
