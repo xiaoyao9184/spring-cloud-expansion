@@ -1,11 +1,11 @@
 # spring-cloud-expansion
 
+[![](https://jitpack.io/v/xiaoyao9184/spring-cloud-expansion.svg)](https://jitpack.io/#xiaoyao9184/spring-cloud-expansion)
+
 XY's spring cloud expansion
 
 
 # info
-
-
 
 
 ## zuul-basic-authentication
