@@ -1,0 +1,32 @@
+debug: true
+
+spring:
+  application:
+    name: Tunnel
+
+zuul:
+  host:
+    socket-timeout-millis: 100000
+    connect-timeout-millis: 20000
+  routes:
+    fuckup:
+      path: /fuckup/**
+      url: 0.0.0.0
+    httpbin:
+      path: /httpbin/**
+      url: http://httpbin.org
+
+proxy:
+  tunnel:
+    sockets:
+      httpbin:
+        maxConnCount: 5
+        port: 2333
+
+
+logging:
+  level:
+    ROOT: DEBUG
+
+
+

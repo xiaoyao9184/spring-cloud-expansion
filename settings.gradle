@@ -1,6 +1,9 @@
 include 'zuul-basic-authentication'
 include 'sample-zuul-basic-authentication'
+include 'zuul-localtunnel'
+include 'sample-zuul-localtunnel'
 
 rootProject.name = "${projectName}"
 project(":sample-zuul-basic-authentication").projectDir = new File("samples/zuul-basic/zuul-gateway")
+project(":sample-zuul-localtunnel").projectDir = new File("samples/zuul-tunnel/zuul-tunnel")
 
