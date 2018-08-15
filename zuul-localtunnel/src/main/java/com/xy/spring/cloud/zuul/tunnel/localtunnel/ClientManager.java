@@ -35,6 +35,14 @@ public class ClientManager {
         return this.clients.get(id);
     }
 
+    public boolean canInitClient(String id){
+        if(this.clients.containsKey(id)){
+            Option option = opt.getOrDefault(id,DEFAULT_OPTION);
+            return option.getAcceptRepeat();
+        }
+        return true;
+    }
+
     public Statistics getStats() {
         return stats;
     }
@@ -85,6 +93,7 @@ public class ClientManager {
         info.setId(id);
         info.setPort(port);
         info.setMaxConnCount(option.getMaxTcpSockets());
+        client.setInfo(info);
         return info;
     }
 
@@ -143,7 +152,7 @@ public class ClientManager {
         {
             setPort(0);
             setMaxTcpSockets(10);
-            setAcceptRepeat(true);
+            setAcceptRepeat(false);
         }
     };
 }
