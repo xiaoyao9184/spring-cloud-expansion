@@ -10,9 +10,11 @@ import com.xy.spring.cloud.zuul.tunnel.localtunnel.ClientManager;
 import com.xy.spring.cloud.zuul.tunnel.localtunnel.Info;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cloud.netflix.zuul.filters.RouteLocator;
 import org.springframework.cloud.netflix.zuul.filters.ZuulProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.web.util.UrlPathHelper;
 
 import java.io.IOException;
 
@@ -26,17 +28,26 @@ public class InitTunnelFilter extends ZuulFilter {
 
     private static Logger logger = LoggerFactory.getLogger(InitTunnelFilter.class);
 
+
+    private UrlPathHelper urlPathHelper = new UrlPathHelper();
+
     private ZuulProperties zuulProperties;
     private ZuulTunnelProperties zuulTunnelProperties;
+    private RouteLocator routeLocator;
     private ClientManager clientManager;
     private ObjectMapper objectMapper;
 
     public void setZuulProperties(ZuulProperties zuulProperties) {
         this.zuulProperties = zuulProperties;
+        this.urlPathHelper.setRemoveSemicolonContent(zuulProperties.isRemoveSemicolonContent());
     }
 
     public void setZuulTunnelProperties(ZuulTunnelProperties zuulTunnelProperties) {
         this.zuulTunnelProperties = zuulTunnelProperties;
+    }
+
+    public void setRouteLocator(RouteLocator routeLocator) {
+        this.routeLocator = routeLocator;
     }
 
     public void setClientManager(ClientManager clientManager) {
@@ -60,7 +71,7 @@ public class InitTunnelFilter extends ZuulFilter {
     @Override
     public boolean shouldFilter() {
         RequestContext ctx = RequestContext.getCurrentContext();
-        String proxy = ctx.getOrDefault(PROXY_KEY,"").toString();
+        String proxy = ctx.getOrDefault(PROXY_KEY,null).toString();
 
         //tunnel proxy
         //root path
@@ -69,7 +80,7 @@ public class InitTunnelFilter extends ZuulFilter {
                 && isRequestRootPath(ctx)
                 && clientManager.canInitClient(proxy)){
             logger.debug("Tunnel route '{}' will be initialized!",
-                    ctx.getOrDefault(PROXY_KEY,"").toString());
+                    ctx.getOrDefault(PROXY_KEY,"**NO PROXY_KEY**").toString());
             return true;
         }
         return false;
@@ -78,7 +89,7 @@ public class InitTunnelFilter extends ZuulFilter {
     @Override
     public Object run() {
         RequestContext ctx = RequestContext.getCurrentContext();
-        String proxy = ctx.getOrDefault(PROXY_KEY,"").toString();
+        String proxy = ctx.getOrDefault(PROXY_KEY,null).toString();
 
         Client client = clientManager.getClient(proxy);
         Info info;
@@ -128,12 +139,26 @@ public class InitTunnelFilter extends ZuulFilter {
      * @return true/false
      */
     private boolean isRequestRootPath(RequestContext ctx){
-        String path = ctx.getRequest().getRequestURI();
-        //replace zuul servlet path
-        path = path.replace(zuulProperties.getServletPath(),"");
-        String[] parts = path.split("/");
-
-        return parts.length == 2
-                && !path.endsWith("/");
+        //Don't just use this because you can't be sure the root path when not strip prefix
+        String targetPath = ctx.getOrDefault(REQUEST_URI_KEY,"**NO REQUEST_URI_KEY**").toString();
+        if(targetPath.isEmpty()){
+            return true;
+        }
+        //not strip prefix need to check the request path
+        String id = ctx.getOrDefault(PROXY_KEY,null).toString();
+        String routeRootPath = routeLocator.getRoutes().stream()
+                .filter(r -> r.getId().equals(id))
+                .map(r -> {
+                    int index = r.getFullPath().indexOf("*") - 1;
+                    if (index > 0) {
+                        String rootPath = r.getFullPath().substring(0, index);
+                        return rootPath;
+                    }
+                    return r.getFullPath();
+                })
+                .findFirst()
+                .orElse(null);
+        String requestPath = urlPathHelper.getPathWithinApplication(ctx.getRequest());
+        return requestPath.equals(routeRootPath);
     }
 }

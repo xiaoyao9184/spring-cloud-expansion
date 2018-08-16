@@ -14,6 +14,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cloud.commons.httpclient.ApacheHttpClientFactory;
 import org.springframework.cloud.commons.httpclient.DefaultApacheHttpClientFactory;
 import org.springframework.cloud.netflix.zuul.EnableZuulProxy;
+import org.springframework.cloud.netflix.zuul.filters.RouteLocator;
 import org.springframework.cloud.netflix.zuul.filters.ZuulProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +25,8 @@ import java.net.URL;
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static com.xy.spring.cloud.zuul.tunnel.localtunnel.ClientManager.DEFAULT_OPTION;
 
 /**
  * Created by xiaoyao9184 on 2018/8/7.
@@ -39,8 +42,12 @@ public class ZuulTunnelAutoConfiguration {
                 .map(route -> {
                     ClientManager.Option option = new ClientManager.Option();
                     option.setPort(route.getPort());
-                    option.setMaxTcpSockets(route.getMaxConnCount());
-                    option.setAcceptRepeat(true);
+                    option.setMaxTcpSockets(route.getMaxConnCount() == null ?
+                            DEFAULT_OPTION.getMaxTcpSockets() : route.getMaxConnCount());
+                    option.setInitTcpSockets(route.getConnCount() == null ?
+                            DEFAULT_OPTION.getInitTcpSockets() : route.getConnCount());
+                    option.setAcceptRepeat(route.getAcceptRepeat() == null ?
+                            DEFAULT_OPTION.getAcceptRepeat() : route.getAcceptRepeat());
                     return new AbstractMap.SimpleEntry<>(route.getId(),option);
                 })
                 .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
@@ -106,6 +113,9 @@ public class ZuulTunnelAutoConfiguration {
         private ZuulTunnelProperties zuulTunnelProperties;
 
         @Autowired
+        private RouteLocator routeLocator;
+
+        @Autowired
         private ClientManager clientManager;
 
         @Autowired
@@ -126,6 +136,7 @@ public class ZuulTunnelAutoConfiguration {
             InitTunnelFilter filter = new InitTunnelFilter();
             filter.setZuulProperties(zuulProperties);
             filter.setZuulTunnelProperties(zuulTunnelProperties);
+            filter.setRouteLocator(routeLocator);
             filter.setClientManager(clientManager);
             filter.setObjectMapper(objectMapper);
             return filter;

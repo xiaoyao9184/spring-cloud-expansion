@@ -1,6 +1,5 @@
 package com.xy.spring.cloud.zuul.tunnel;
 
-import com.xy.spring.cloud.zuul.tunnel.localtunnel.ClientManager;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import javax.annotation.PostConstruct;
@@ -70,7 +69,9 @@ public class ZuulTunnelProperties {
 
         private String id;
         private Integer maxConnCount;
+        private Integer connCount;
         private Integer port;
+        private Boolean acceptRepeat;
 
         public String getId() {
             return id;
@@ -88,12 +89,28 @@ public class ZuulTunnelProperties {
             this.maxConnCount = maxConnCount;
         }
 
+        public Integer getConnCount() {
+            return connCount;
+        }
+
+        public void setConnCount(Integer connCount) {
+            this.connCount = connCount;
+        }
+
         public Integer getPort() {
             return port;
         }
 
         public void setPort(Integer port) {
             this.port = port;
+        }
+
+        public Boolean getAcceptRepeat() {
+            return acceptRepeat;
+        }
+
+        public void setAcceptRepeat(Boolean acceptRepeat) {
+            this.acceptRepeat = acceptRepeat;
         }
     }
 

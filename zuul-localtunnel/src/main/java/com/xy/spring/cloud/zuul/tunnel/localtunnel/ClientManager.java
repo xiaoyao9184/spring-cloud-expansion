@@ -92,7 +92,7 @@ public class ClientManager {
         Info info = new Info();
         info.setId(id);
         info.setPort(port);
-        info.setMaxConnCount(option.getMaxTcpSockets());
+        info.setMaxConnCount(option.getInitTcpSockets());
         client.setInfo(info);
         return info;
     }
@@ -118,6 +118,7 @@ public class ClientManager {
     public static class Option {
         private Integer port;
         private Integer maxTcpSockets;
+        private Integer initTcpSockets;
         private Boolean acceptRepeat;
 
         public Integer getPort() {
@@ -136,6 +137,14 @@ public class ClientManager {
             this.maxTcpSockets = maxTcpSockets;
         }
 
+        public Integer getInitTcpSockets() {
+            return initTcpSockets;
+        }
+
+        public void setInitTcpSockets(Integer initTcpSockets) {
+            this.initTcpSockets = initTcpSockets;
+        }
+
         public Boolean getAcceptRepeat() {
             return acceptRepeat;
         }
@@ -151,7 +160,8 @@ public class ClientManager {
     public static Option DEFAULT_OPTION = new Option(){
         {
             setPort(0);
-            setMaxTcpSockets(10);
+            setMaxTcpSockets(100);
+            setInitTcpSockets(10);
             setAcceptRepeat(false);
         }
     };

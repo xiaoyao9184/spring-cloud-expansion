@@ -40,7 +40,7 @@ public class TunnelAgent {
     public TunnelAgent(String name, Integer maxTcpSockets) throws IOException {
         this.availableSockets = new LinkedList<>();
 
-        connectedSockets = 0;
+        this.connectedSockets = 0;
         this.maxTcpSockets = maxTcpSockets;
     }
 

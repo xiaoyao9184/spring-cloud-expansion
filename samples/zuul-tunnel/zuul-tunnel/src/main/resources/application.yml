@@ -20,7 +20,7 @@ proxy:
   tunnel:
     sockets:
       httpbin:
-        maxConnCount: 5
+        connCount: 5
         port: 2333
 
 
