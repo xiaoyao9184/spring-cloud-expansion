@@ -121,3 +121,56 @@ For example
 
 Now your tunnel-zuul gateway will proxy iis service(localhost:80) by use route 'iis', 
 proxy data pack through tunnel-zuul's port 2333 to iis's port 80
+
+
+
+
+## zuul-outer-redirect
+
+Ok, Rewrite redirect location already supported in zuul,
+But is always rewrite to point gateway itself.
+
+Use this to do the following:
+
+- redirect to other outer service not gateway or request service
+- redirect to gateway and proxy to downstream service
+
+
+For example
+```yaml
+
+zuul:
+  host:
+    socket-timeout-millis: 100000
+    connect-timeout-millis: 20000
+  prefix: /proxy
+  routes:
+    redirect:
+      path: /redirect/**
+      url: http://localhost:8080
+    redirect-api:
+      path: /redirect/api/**
+      url: http://localhost:8080/api
+    httpbin:
+      path: /httpbin/**
+      url: http://httpbin.org
+
+proxy:
+  redirect:
+    allowToOtherRoute: true
+    passThroughOtherRoute: true
+    passThroughOuter: true
+    routes:
+      httpbin:
+        allowProxyRedirected: false
+```
+
+If request target route is 'redirect', it can redirect this:
+
+
+| redirect | target to route | rewrite |
+|-----|-----|-----|
+| http://localhost:8080/** | redirect | http://localhost:8080/proxy/redirect/** |
+| http://localhost:8080/api/** | redirect-api | http://localhost:8080/proxy/redirect/api/** |
+| http://httpbin.org/** | httpbin | NONE |
+| http://www.gayhub.com | NONE | NONE |

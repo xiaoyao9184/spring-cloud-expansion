@@ -1,0 +1,38 @@
+debug: true
+
+spring:
+  application:
+    name: Redirect
+
+zuul:
+  host:
+    socket-timeout-millis: 100000
+    connect-timeout-millis: 20000
+  prefix: /proxy
+  routes:
+    redirect:
+      path: /redirect/**
+      url: http://localhost:8080
+    api:
+      path: /api/**
+      url: http://localhost:8080/api
+    httpbin:
+      path: /httpbin/**
+      url: http://httpbin.org
+
+proxy:
+  redirect:
+    allowToOtherRoute: true
+    passThroughOtherRoute: true
+    passThroughOuter: true
+    routes:
+      httpbin:
+        allowProxyRedirected: false
+
+
+logging:
+  level:
+    ROOT: DEBUG
+
+
+

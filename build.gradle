@@ -112,3 +112,36 @@ project(':zuul-localtunnel') {
         optional 'org.springframework.boot:spring-boot-configuration-processor'
     }
 }
+
+
+project(':zuul-outer-redirect') {
+    group = 'com.github.xiaoyao9184'
+    version = "0.1-SNAPSHOT"
+
+    description = "zuul redirect outer support"
+
+    apply plugin: 'java'
+    apply plugin: 'maven'
+    apply plugin: 'maven-publish'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'propdeps'
+    apply plugin: "io.spring.dependency-management"
+    apply plugin: 'net.researchgate.release'
+    apply plugin: 'com.github.ksoichiro.build.info'
+
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+        }
+    }
+
+    dependencies {
+        //Cloud
+        compile 'org.springframework.cloud:spring-cloud-starter-zuul'
+        //Boot
+        optional 'org.springframework.boot:spring-boot-configuration-processor'
+    }
+}

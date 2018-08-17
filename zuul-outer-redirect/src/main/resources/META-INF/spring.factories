@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.xy.spring.cloud.zuul.redirect.ZuulRedirectAutoConfiguration
