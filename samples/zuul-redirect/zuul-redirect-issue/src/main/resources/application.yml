@@ -1,0 +1,27 @@
+debug: true
+
+spring:
+  application:
+    name: Redirect-issue
+
+zuul:
+  host:
+    socket-timeout-millis: 100000
+    connect-timeout-millis: 20000
+  prefix: /xiaoyao9184
+  strip-prefix: false
+  routes:
+    sce:
+      path: /spring-cloud-expansion/**
+      url: https://raw.githubusercontent.com
+      strip-prefix: false
+    api:
+      path: /spring-cloud-expansion/master/LICENSE.md
+      url: https://raw.githubusercontent.com/xiaoyao9184/spring-cloud-expansion/master/LICENSE
+
+logging:
+  level:
+    ROOT: DEBUG
+
+
+

@@ -4,9 +4,11 @@ include 'zuul-localtunnel'
 include 'sample-zuul-localtunnel'
 include 'zuul-outer-redirect'
 include 'sample-zuul-outer-redirect'
+include 'sample-zuul-issue-redirect'
 
 rootProject.name = "${projectName}"
 project(":sample-zuul-basic-authentication").projectDir = new File("samples/zuul-basic/zuul-gateway")
 project(":sample-zuul-localtunnel").projectDir = new File("samples/zuul-tunnel/zuul-tunnel")
 project(":sample-zuul-outer-redirect").projectDir = new File("samples/zuul-redirect/zuul-redirect")
+project(":sample-zuul-issue-redirect").projectDir = new File("samples/zuul-redirect/zuul-redirect-issue")
 
