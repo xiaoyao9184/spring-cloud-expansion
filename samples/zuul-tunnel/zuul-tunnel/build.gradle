@@ -29,6 +29,7 @@ dependencies {
     compile 'org.springframework.cloud:spring-cloud-starter-zuul'
     //Boot
     compile 'org.springframework.boot:spring-boot-starter-web'
+    compile 'org.springframework.boot:spring-boot-starter-actuator'
 
     //tunnel
     compile(project(':zuul-localtunnel'))

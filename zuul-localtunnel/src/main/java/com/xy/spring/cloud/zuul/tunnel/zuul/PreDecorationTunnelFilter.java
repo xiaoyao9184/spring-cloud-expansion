@@ -5,9 +5,11 @@ import com.netflix.zuul.context.RequestContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Collection;
 
+import static com.xy.spring.cloud.zuul.tunnel.ZuulTunnelProperties.NO_EXIST_HOST;
+import static com.xy.spring.cloud.zuul.tunnel.ZuulTunnelProperties.TUNNEL_SERVICE_ID;
 import static org.springframework.cloud.netflix.zuul.filters.support.FilterConstants.*;
 
 /**
@@ -19,20 +21,21 @@ public class PreDecorationTunnelFilter extends ZuulFilter {
 
     public static final String TUNNEL_KEY = "tunnel";
 
-    private String matchHost;
-    private URL replaceRouteHost;
-    private Collection<String> enableServiceIds;
+    private TunnelRouteLocator tunnelRouteLocator;
+    private String tunnelServiceId = TUNNEL_SERVICE_ID;
+    private String tunnelRouteHost = NO_EXIST_HOST;
 
-    public void setMatchHost(String matchHost) {
-        this.matchHost = matchHost;
+
+    public PreDecorationTunnelFilter(TunnelRouteLocator tunnelRouteLocator){
+        this.tunnelRouteLocator = tunnelRouteLocator;
     }
 
-    public void setReplaceRouteHost(URL replaceRouteHost) {
-        this.replaceRouteHost = replaceRouteHost;
+    public void setTunnelServiceId(String tunnelServiceId) {
+        this.tunnelServiceId = tunnelServiceId;
     }
 
-    public void setEnableServiceIds(Collection<String> enableServiceIds) {
-        this.enableServiceIds = enableServiceIds;
+    public void setTunnelRouteHost(String tunnelRouteHost) {
+        this.tunnelRouteHost = tunnelRouteHost;
     }
 
     @Override
@@ -48,18 +51,23 @@ public class PreDecorationTunnelFilter extends ZuulFilter {
     @Override
     public boolean shouldFilter() {
         RequestContext ctx = RequestContext.getCurrentContext();
-        if(enableServiceIds.contains(
-                ctx.getOrDefault(PROXY_KEY,"").toString())){
-            logger.debug("The zuul route '{}' is specified to use tunnel!",
-                    ctx.getOrDefault(PROXY_KEY,"").toString());
+        String proxy = ctx.getOrDefault(PROXY_KEY,"").toString();
+
+        if(tunnelRouteLocator.isTunnelRoute(proxy)){
+            logger.debug("The zuul route '{}' is specified to use tunnel!", proxy);
             return true;
         }
 
         if(ctx.containsKey(SERVICE_ID_KEY)
                 && ctx.getRouteHost() == null){
-            if(ctx.get(SERVICE_ID_KEY).equals(matchHost)){
-                logger.debug("The zuul route '{}' service id is match to use tunnel!",
-                        ctx.getOrDefault(PROXY_KEY,"").toString());
+            if(ctx.get(SERVICE_ID_KEY).equals(tunnelServiceId)){
+                logger.debug("The zuul route '{}' service id is match to use tunnel!", proxy);
+                return true;
+            }
+        }else if(!ctx.containsKey(SERVICE_ID_KEY)
+                && ctx.getRouteHost() != null){
+            if(tunnelRouteHost.contains(ctx.getRouteHost().getHost())){
+                logger.debug("The zuul route '{}' host is match to use tunnel!", proxy);
                 return true;
             }
         }
@@ -73,10 +81,14 @@ public class PreDecorationTunnelFilter extends ZuulFilter {
 
         if(ctx.containsKey(SERVICE_ID_KEY)){
             ctx.remove(SERVICE_ID_KEY);
-            ctx.setRouteHost(replaceRouteHost);
+            try {
+                ctx.setRouteHost(new URL(tunnelRouteHost));
+            } catch (MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
             logger.debug("Tunnel route '{}' use '{}' to generate an HTTP request packet!",
                     ctx.getOrDefault(PROXY_KEY,"").toString(),
-                    replaceRouteHost);
+                    tunnelRouteHost);
         }
         return null;
     }

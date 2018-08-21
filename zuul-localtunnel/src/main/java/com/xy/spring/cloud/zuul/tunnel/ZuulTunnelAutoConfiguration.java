@@ -1,15 +1,18 @@
 package com.xy.spring.cloud.zuul.tunnel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xy.spring.cloud.zuul.tunnel.actuate.TunnelEndpoint;
+import com.xy.spring.cloud.zuul.tunnel.actuate.TunnelMvcEndpoint;
 import com.xy.spring.cloud.zuul.tunnel.apachel.TunnelApacheHttpClientConnectionManagerFactory;
 import com.xy.spring.cloud.zuul.tunnel.apachel.TunnelPlainConnectionSocketFactory;
 import com.xy.spring.cloud.zuul.tunnel.localtunnel.ClientManager;
-import com.xy.spring.cloud.zuul.tunnel.zuul.InitTunnelFilter;
-import com.xy.spring.cloud.zuul.tunnel.zuul.PreDecorationTunnelFilter;
-import com.xy.spring.cloud.zuul.tunnel.zuul.ZuulRequestContextPassThroughHttpClientConfiguration;
+import com.xy.spring.cloud.zuul.tunnel.zuul.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.condition.ConditionalOnEnabledEndpoint;
+import org.springframework.boot.actuate.endpoint.Endpoint;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.commons.httpclient.ApacheHttpClientFactory;
 import org.springframework.cloud.commons.httpclient.DefaultApacheHttpClientFactory;
@@ -19,9 +22,9 @@ import org.springframework.cloud.netflix.zuul.filters.ZuulProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Lazy;
 
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,18 +40,18 @@ import static com.xy.spring.cloud.zuul.tunnel.localtunnel.ClientManager.DEFAULT_
 public class ZuulTunnelAutoConfiguration {
 
 
-    public Map<String,ClientManager.Option> mapOptions (Map<String, ZuulTunnelProperties.Route> routeMap){
+    public Map<String,ClientManager.Option> mapOptions (Map<String, ZuulTunnelProperties.TunnelSocket> routeMap){
         return routeMap.values().stream()
-                .map(route -> {
+                .map(tunnelSocket -> {
                     ClientManager.Option option = new ClientManager.Option();
-                    option.setPort(route.getPort());
-                    option.setMaxTcpSockets(route.getMaxConnCount() == null ?
-                            DEFAULT_OPTION.getMaxTcpSockets() : route.getMaxConnCount());
-                    option.setInitTcpSockets(route.getConnCount() == null ?
-                            DEFAULT_OPTION.getInitTcpSockets() : route.getConnCount());
-                    option.setAcceptRepeat(route.getAcceptRepeat() == null ?
-                            DEFAULT_OPTION.getAcceptRepeat() : route.getAcceptRepeat());
-                    return new AbstractMap.SimpleEntry<>(route.getId(),option);
+                    option.setPort(tunnelSocket.getPort());
+                    option.setMaxTcpSockets(tunnelSocket.getMaxConnCount() == null ?
+                            DEFAULT_OPTION.getMaxTcpSockets() : tunnelSocket.getMaxConnCount());
+                    option.setInitTcpSockets(tunnelSocket.getConnCount() == null ?
+                            DEFAULT_OPTION.getInitTcpSockets() : tunnelSocket.getConnCount());
+                    option.setAcceptRepeat(tunnelSocket.getAcceptRepeat() == null ?
+                            DEFAULT_OPTION.getAcceptRepeat() : tunnelSocket.getAcceptRepeat());
+                    return new AbstractMap.SimpleEntry<>(tunnelSocket.getId(),option);
                 })
                 .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
     }
@@ -121,15 +124,28 @@ public class ZuulTunnelAutoConfiguration {
         @Autowired
         private ObjectMapper objectMapper;
 
+
         @Bean
-        public PreDecorationTunnelFilter preTunnelFilter() throws MalformedURLException {
-            PreDecorationTunnelFilter filter = new PreDecorationTunnelFilter();
-            filter.setMatchHost(zuulTunnelProperties.getMatchServiceId());
-            filter.setReplaceRouteHost(new URL(zuulTunnelProperties.getReplaceRouteHost()));
-            filter.setEnableServiceIds(zuulTunnelProperties.getSockets().keySet());
-            return filter;
+        public TunnelRouteLocator tunnelRouteLocator(
+                @Autowired ServerProperties server,
+                @Autowired ClientManager clientManager
+        ){
+            TunnelRouteLocator locator = new TunnelRouteLocator(
+                    server.getServletPrefix(),
+                    zuulProperties,
+                    zuulTunnelProperties,
+                    clientManager
+            );
+            return locator;
         }
 
+        @Bean
+        public PreDecorationTunnelFilter preTunnelFilter(TunnelRouteLocator tunnelRouteLocator) {
+            PreDecorationTunnelFilter filter = new PreDecorationTunnelFilter(tunnelRouteLocator);
+            filter.setTunnelServiceId(zuulTunnelProperties.getServiceId());
+            filter.setTunnelRouteHost(zuulTunnelProperties.getRouteHost());
+            return filter;
+        }
 
         @Bean
         public InitTunnelFilter initTunnelFilter() throws MalformedURLException {
@@ -143,5 +159,31 @@ public class ZuulTunnelAutoConfiguration {
         }
     }
 
+
+    @Configuration
+    @ConditionalOnClass(Endpoint.class)
+    public static class ActuateConfiguration {
+
+        @ConditionalOnEnabledEndpoint("tunnels")
+        @Bean
+        public TunnelEndpoint tunnelEndpoint(ZuulProperties zuulProperties,
+                                             ClientManager clientManager) {
+            return new TunnelEndpoint(zuulProperties,clientManager);
+        }
+
+        @ConditionalOnEnabledEndpoint("tunnels")
+        @Bean
+        public TunnelMvcEndpoint tunnelMvcEndpoint(
+                TunnelEndpoint tunnelEndpoint,
+                @Autowired @Lazy TunnelRouteLocator tunnelRouteLocator,
+                ZuulProperties zuulProperties,
+                ZuulTunnelProperties zuulTunnelProperties) {
+            return new TunnelMvcEndpoint(
+                    tunnelEndpoint,
+                    tunnelRouteLocator,
+                    zuulTunnelProperties.getServiceId(),
+                    zuulProperties.getPrefix());
+        }
+    }
 
 }

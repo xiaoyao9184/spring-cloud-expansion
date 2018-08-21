@@ -14,58 +14,50 @@ import java.util.Map;
 )
 public class ZuulTunnelProperties {
 
-    public static final String PROPERTIE_SERVLET = "proxy.tunnel.servlet";
+    public static final String TUNNEL_SERVICE_ID =  "0.0.0.0";
 
-    private Boolean servlet = false;
-    private String matchServiceId = "0.0.0.0";
-    private String replaceRouteHost = "http://127.0.0.0";
+    public static final String NO_EXIST_HOST = "http://127.0.0.0";
 
-    private Map<String, Route> sockets = new HashMap<String, Route>();
+    private String serviceId = TUNNEL_SERVICE_ID;
+    private String routeHost = NO_EXIST_HOST;
+    private Map<String, TunnelSocket> sockets = new HashMap<String, TunnelSocket>();
 
 
     @PostConstruct
     public void init() {
-        for (Map.Entry<String, Route> entry : sockets.entrySet()) {
+        for (Map.Entry<String, TunnelSocket> entry : sockets.entrySet()) {
             if (entry.getValue().getId() == null) {
                 entry.getValue().setId(entry.getKey());
             }
         }
     }
 
-
-    public Boolean getServlet() {
-        return servlet;
+    public String getServiceId() {
+        return serviceId;
     }
 
-    public void setServlet(Boolean servlet) {
-        this.servlet = servlet;
+    public void setServiceId(String serviceId) {
+        this.serviceId = serviceId;
     }
 
-    public String getMatchServiceId() {
-        return matchServiceId;
+    public String getRouteHost() {
+        return routeHost;
     }
 
-    public void setMatchServiceId(String matchServiceId) {
-        this.matchServiceId = matchServiceId;
+    public void setRouteHost(String routeHost) {
+        this.routeHost = routeHost;
     }
 
-    public String getReplaceRouteHost() {
-        return replaceRouteHost;
-    }
-
-    public void setReplaceRouteHost(String replaceRouteHost) {
-        this.replaceRouteHost = replaceRouteHost;
-    }
-
-    public Map<String, Route> getSockets() {
+    public Map<String, TunnelSocket> getSockets() {
         return sockets;
     }
 
-    public void setSockets(Map<String, Route> sockets) {
+    public void setSockets(Map<String, TunnelSocket> sockets) {
         this.sockets = sockets;
     }
 
-    public static class Route {
+
+    public static class TunnelSocket {
 
         private String id;
         private Integer maxConnCount;

@@ -1,5 +1,8 @@
 package com.xy.spring.cloud.zuul.tunnel.localtunnel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -8,6 +11,9 @@ import java.util.Map;
  * Created by xiaoyao9184 on 2018/7/12.
  */
 public class ClientManager {
+
+    private static Logger logger = LoggerFactory.getLogger(ClientManager.class);
+
     private Map<String,Option> opt;
     private Map<String,Client> clients;
     private Statistics stats;
@@ -30,6 +36,12 @@ public class ClientManager {
         opt.putIfAbsent(DEFAULT_OPTION_KEY, DEFAULT_OPTION);
     }
 
+
+
+
+    public Map<String,Client> getClient() {
+        return this.clients;
+    }
 
     public Client getClient(String id) {
         return this.clients.get(id);
@@ -97,6 +109,35 @@ public class ClientManager {
         return info;
     }
 
+    /**
+     * Init or new client
+     * @param id ID of tunnel
+     * @param proxyPath proxy path for request
+     * @return Tunnel Info
+     */
+    public Info getOrNewClient(String id, String proxyPath){
+        Client client = clients.get(id);
+        Info info;
+        if(client == null){
+            try {
+                logger.debug("Tunnel making new client with id '{}'!", id);
+                info = newClient(id);
+            } catch (IOException e) {
+                logger.error("Tunnel making new client error!",e);
+                throw new RuntimeException("Tunnel making new client error!",e);
+            }
+        }else{
+            logger.debug("Tunnel use already client with id '{}'!", id);
+            info = client.getInfo();
+        }
+
+        info.setUrl(proxyPath);
+        logger.debug("Tunnel client '{}', port:{}, conn count:{}, url: {}.",
+                info.getId(),
+                info.getPort(), info.getMaxConnCount(), info.getUrl());
+
+        return info;
+    }
 
     public static class Statistics {
         private Integer tunnels = 0;

@@ -31,19 +31,15 @@ public class InitTunnelFilter extends ZuulFilter {
 
     private UrlPathHelper urlPathHelper = new UrlPathHelper();
 
-    private ZuulProperties zuulProperties;
-    private ZuulTunnelProperties zuulTunnelProperties;
     private RouteLocator routeLocator;
     private ClientManager clientManager;
     private ObjectMapper objectMapper;
 
     public void setZuulProperties(ZuulProperties zuulProperties) {
-        this.zuulProperties = zuulProperties;
         this.urlPathHelper.setRemoveSemicolonContent(zuulProperties.isRemoveSemicolonContent());
     }
 
     public void setZuulTunnelProperties(ZuulTunnelProperties zuulTunnelProperties) {
-        this.zuulTunnelProperties = zuulTunnelProperties;
     }
 
     public void setRouteLocator(RouteLocator routeLocator) {
@@ -90,31 +86,14 @@ public class InitTunnelFilter extends ZuulFilter {
     public Object run() {
         RequestContext ctx = RequestContext.getCurrentContext();
         String proxy = ctx.getOrDefault(PROXY_KEY,null).toString();
+        String path = ctx.getRequest().getRequestURL().toString();
 
-        Client client = clientManager.getClient(proxy);
-        Info info;
-        if(client == null){
-            try {
-                logger.debug("Tunnel route making new client with id '{}'!", proxy);
-                info = clientManager.newClient(proxy);
-            } catch (IOException e) {
-                logger.error("Tunnel route making new client error!",e);
-                throw new RuntimeException("Tunnel route making new client error!",e);
-            }
-        }else{
-            logger.debug("Tunnel route use already client with id '{}'!", proxy);
-            info = client.getInfo();
-        }
-
-        info.setUrl(ctx.getRequest().getRequestURL().toString());
-        logger.debug("Tunnel client '{}', port:{}, conn count:{}, url: {}.",
-                info.getId(),
-                info.getPort(), info.getMaxConnCount(), info.getUrl());
+        Info info = clientManager.getOrNewClient(proxy, path);
 
         try {
-            ctx.addZuulResponseHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
             ctx.setSendZuulResponse(false);
             ctx.setResponseStatusCode(200);
+            ctx.addZuulResponseHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
             ctx.setResponseBody(objectMapper.writeValueAsString(info));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Tunnel route info write error!",e);
