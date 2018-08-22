@@ -4,6 +4,11 @@ spring:
   application:
     name: Tunnel
 
+endpoints:
+  sensitive: false
+  routes:
+    enabled: true
+
 zuul:
   host:
     socket-timeout-millis: 100000

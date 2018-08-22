@@ -37,7 +37,7 @@ public class TunnelPlainConnectionSocketFactory extends PlainConnectionSocketFac
             Client client = clientManager.getClient(clientId);
             if(client != null){
                 logger.debug("Use tunnel client '{}' socket!", clientId);
-                Socket socket = client.getAgent().createConnection();
+                Socket socket = client.getAgent().pullConnection();
                 if(socket != null){
                     return socket;
                 }

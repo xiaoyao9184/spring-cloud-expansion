@@ -4,10 +4,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.ServerSocket;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.channels.*;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by xiaoyao9184 on 2018/7/13.
@@ -16,116 +20,162 @@ public class TunnelAgent {
 
     private static Logger logger = LoggerFactory.getLogger(TunnelAgent.class);
 
-    // sockets we can hand out via createConnection
+    // sockets we can hand out via pullConnection
     private Queue<Socket> availableSockets;
-
-
-
-    // when a createConnection cannot return a socket, it goes into a queue
-    // once a socket is available it is handed out to the next callback
 
     // track maximum allowed sockets
     private Integer connectedSockets;
     private Integer maxTcpSockets;
 
     // new tcp server to service requests for this client
-    private ServerSocket serverSocket;
-    private SocketAcceptHandler socketAcceptHandler;
-    private Thread socketAcceptThread;
+    private ServerSocketChannel channel;
+    private Selector selector;
+    private ReentrantLock lock;
 
     // flag to avoid double starts
     private Boolean started = false;
     private Boolean closed = false;
 
-    public TunnelAgent(String name, Integer maxTcpSockets) throws IOException {
+
+    /**
+     *
+     * @param maxTcpSockets
+     * @param selector
+     * @param selectorLock
+     * @throws IOException
+     */
+    public TunnelAgent(Integer maxTcpSockets, Selector selector, ReentrantLock selectorLock) throws IOException {
         this.availableSockets = new LinkedList<>();
 
         this.connectedSockets = 0;
         this.maxTcpSockets = maxTcpSockets;
+        this.channel = ServerSocketChannel.open();
+        this.selector = selector;
+        this.lock = selectorLock;
     }
 
+    /**
+     * make listen
+     * @param port port
+     * @return port
+     * @throws IOException
+     */
     public Integer listen(Integer port) throws IOException {
         if (this.started) {
             throw new RuntimeException("already started");
         }
         this.started = true;
 
-        this.serverSocket = new ServerSocket(port);
-        this.socketAcceptHandler = new SocketAcceptHandler(serverSocket);
-        this.socketAcceptThread = new Thread(TUNNEL_GROUP,socketAcceptHandler,"tunnel-socket-accept");
 
-        this.socketAcceptThread.start();
-        return serverSocket.getLocalPort();
+        channel.bind(new InetSocketAddress(port), this.maxTcpSockets);
+        channel.configureBlocking(false);
+
+        //sync selector register and select
+        lock.lock();
+        selector.wakeup();
+        channel.register(selector, SelectionKey.OP_ACCEPT, this);
+        lock.unlock();
+
+        return channel.socket().getLocalPort();
     }
 
+    /**
+     * make listen
+     * @return port
+     * @throws IOException
+     */
     public Integer listen() throws IOException {
         return listen(0);
     }
 
-    public synchronized Socket createConnection(){
+    /**
+     * pull socket from available
+     * @return Socket
+     */
+    public synchronized Socket pullConnection(){
         if (this.closed) {
-            throw new RuntimeException("closed");
+            throw new RuntimeException("Tunnel agent already closed!");
         }
 
-        logger.debug("create connection");
+        logger.debug("Create connection use tunnel agent cached!");
 
         // socket is a tcp connection back to the user hosting the site
         Socket sock = this.availableSockets.poll();
         this.connectedSockets--;
 
         // no available sockets
-        // wait until we have one
         if (sock == null) {
-//            this.waitingCreateConn.push(cb);
-//            this.debug('waiting connected: %s', this.connectedSockets);
-//            this.debug('waiting available: %s', this.availableSockets.length);
+            logger.warn("No available sockets form tunnel agent!");
             return null;
         }
 
-        logger.debug("socket given");
+        logger.debug("Already got socket form tunnel agent!");
         return sock;
     }
 
-    public synchronized boolean newConnection(Socket socket) throws IOException {
+    /**
+     * push socket to available
+     * @param socket Socket
+     * @return ok
+     * @throws IOException
+     */
+    public synchronized boolean pushConnection(Socket socket) throws IOException {
         if (TunnelAgent.this.connectedSockets >= TunnelAgent.this.maxTcpSockets) {
+            logger.debug("Exceeded the maximum number of connections", socket.getInetAddress().getHostAddress(), socket.getPort());
             socket.close();
             return false;
         }
 
-        logger.debug("new connection from: {}:{}", socket.getInetAddress().getHostAddress(), socket.getPort());
+        logger.debug("New connection from: {}:{}", socket.getInetAddress().getHostAddress(), socket.getPort());
         this.connectedSockets += 1;
         this.availableSockets.add(socket);
         return true;
     }
 
+
     /**
-     * Handle socket accept
+     * Select runnable of Selector thread
      */
-    private class SocketAcceptHandler implements Runnable {
-        private ServerSocket serverSocket;
-        public SocketAcceptHandler(ServerSocket serverSocket) {
-            this.serverSocket = serverSocket;
+    public static class SelectorSocketAcceptHandler implements Runnable {
+
+        private static Logger logger = LoggerFactory.getLogger(SelectorSocketAcceptHandler.class);
+
+        private Selector selector;
+        private ReentrantLock lock;
+
+        public SelectorSocketAcceptHandler(Selector selector, ReentrantLock lock){
+            this.selector = selector;
+            this.lock = lock;
         }
 
         public void run() {
+            logger.debug("Start to tunnel socket select loop!");
             while (true) {
                 try {
-                    // if accept return it mean some client connected.
-                    Socket socket = serverSocket.accept();
-                    //TODO maybe stop when cant create new connection
-                    newConnection(socket);
+                    //sync other thread of selector register
+                    lock.lock();
+                    lock.unlock();
+                    //
+                    int readyChannels = selector.select();
+                    if(readyChannels == 0) continue;
+
+                    logger.debug("Selected count {} channel!", readyChannels);
+                    Set<SelectionKey> selectedKeys = selector.selectedKeys();
+                    Iterator<SelectionKey> keyIterator = selectedKeys.iterator();
+                    while(keyIterator.hasNext()) {
+                        SelectionKey key = keyIterator.next();
+                        if(key.isAcceptable()) {
+                            ServerSocketChannel channel = (ServerSocketChannel) key.channel();
+                            TunnelAgent agent = (TunnelAgent) key.attachment();
+                            agent.pushConnection(channel.accept().socket());
+                        }
+                        keyIterator.remove();
+                    }
                 } catch (IOException e) {
                     logger.error("Socket accept error!",e);
                 }
             }
         }
-    }
-
-    public static ThreadGroup TUNNEL_GROUP = tunnelGroup();
-
-    private static ThreadGroup tunnelGroup(){
-        ThreadGroup group = new ThreadGroup("Tunnel");
-        return group;
     }
 
 }

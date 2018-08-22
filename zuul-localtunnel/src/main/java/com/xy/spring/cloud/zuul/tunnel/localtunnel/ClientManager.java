@@ -4,8 +4,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.channels.Selector;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by xiaoyao9184 on 2018/7/12.
@@ -19,21 +21,38 @@ public class ClientManager {
     private Statistics stats;
 
 
+    private final ReentrantLock selectorLock = new ReentrantLock();
+    private Selector selector;
+    private TunnelAgent.SelectorSocketAcceptHandler socketAcceptHandler;
+    private Thread socketAcceptThread;
 
-    public ClientManager(){
+
+
+    public ClientManager() throws IOException {
         opt = new HashMap<>();
         clients = new HashMap<>();
         stats = new Statistics();
 
         opt.put(DEFAULT_OPTION_KEY, DEFAULT_OPTION);
+
+        initSelector();
     }
 
-    public ClientManager(Map<String,Option> options){
+    public ClientManager(Map<String,Option> options) throws IOException {
         opt = options;
         clients = new HashMap<>();
         stats = new Statistics();
 
         opt.putIfAbsent(DEFAULT_OPTION_KEY, DEFAULT_OPTION);
+
+        initSelector();
+    }
+
+    private void initSelector() throws IOException {
+        this.selector = Selector.open();
+        this.socketAcceptHandler = new TunnelAgent.SelectorSocketAcceptHandler(selector,selectorLock);
+        this.socketAcceptThread = new Thread(socketAcceptHandler,"tunnel-socket-accept-select");
+        this.socketAcceptThread.start();
     }
 
 
@@ -60,9 +79,9 @@ public class ClientManager {
     }
 
     /**
-     *
-     * @param id
-     * @return
+     * Init client
+     * @param id ID of tunnel
+     * @return Tunnel Info
      * @throws IOException
      */
     public Info newClient(String id) throws IOException {
@@ -76,8 +95,9 @@ public class ClientManager {
         }
 
         TunnelAgent agent = new TunnelAgent(
-                id,
-                option.getMaxTcpSockets()
+                option.getMaxTcpSockets(),
+                selector,
+                selectorLock
         );
 
         Client client = new Client(
@@ -138,6 +158,7 @@ public class ClientManager {
 
         return info;
     }
+
 
     public static class Statistics {
         private Integer tunnels = 0;

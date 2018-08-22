@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Lazy;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.AbstractMap;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class ZuulTunnelAutoConfiguration {
     @Bean
     public ClientManager clientManager(
             @Autowired ZuulTunnelProperties zuulTunnelProperties
-    ){
+    ) throws IOException {
         return new ClientManager(mapOptions(zuulTunnelProperties.getSockets()));
     }
 
