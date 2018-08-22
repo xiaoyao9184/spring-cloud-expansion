@@ -16,7 +16,7 @@ public class ClientManager {
 
     private static Logger logger = LoggerFactory.getLogger(ClientManager.class);
 
-    private Map<String,Option> opt;
+    private OptionProvider optionProvider;
     private Map<String,Client> clients;
     private Statistics stats;
 
@@ -27,23 +27,10 @@ public class ClientManager {
     private Thread socketAcceptThread;
 
 
-
-    public ClientManager() throws IOException {
-        opt = new HashMap<>();
-        clients = new HashMap<>();
-        stats = new Statistics();
-
-        opt.put(DEFAULT_OPTION_KEY, DEFAULT_OPTION);
-
-        initSelector();
-    }
-
-    public ClientManager(Map<String,Option> options) throws IOException {
-        opt = options;
-        clients = new HashMap<>();
-        stats = new Statistics();
-
-        opt.putIfAbsent(DEFAULT_OPTION_KEY, DEFAULT_OPTION);
+    public ClientManager(OptionProvider provider) throws IOException {
+        this.optionProvider = provider;
+        this.clients = new HashMap<>();
+        this.stats = new Statistics();
 
         initSelector();
     }
@@ -67,8 +54,8 @@ public class ClientManager {
     }
 
     public boolean canInitClient(String id){
-        if(this.clients.containsKey(id)){
-            Option option = opt.getOrDefault(id,DEFAULT_OPTION);
+        if(clients.containsKey(id)){
+            Option option = optionProvider.provideOrDefault(id, DEFAULT_OPTION);
             return option.getAcceptRepeat();
         }
         return true;
@@ -78,6 +65,10 @@ public class ClientManager {
         return stats;
     }
 
+    public OptionProvider getOptionProvider() {
+        return optionProvider;
+    }
+
     /**
      * Init client
      * @param id ID of tunnel
@@ -85,8 +76,7 @@ public class ClientManager {
      * @throws IOException
      */
     public Info newClient(String id) throws IOException {
-        Option option = opt.getOrDefault(id,DEFAULT_OPTION);
-
+        Option option = optionProvider.provideOrDefault(id);
 
         // can't ask for id already is use
         if (clients.containsKey(id) &&
@@ -217,7 +207,6 @@ public class ClientManager {
     }
 
 
-    public static final String DEFAULT_OPTION_KEY = "_default_";
 
     public static Option DEFAULT_OPTION = new Option(){
         {
@@ -227,4 +216,24 @@ public class ClientManager {
             setAcceptRepeat(false);
         }
     };
+
+
+    public interface OptionProvider {
+
+        void configure();
+
+        Map<String,Option> provide();
+
+        Option provide(String name);
+
+        Option provideOrDefault(String name);
+
+        default Option provideOrDefault(String name, Option defaultOption) {
+            Option option = provide(name);
+            if(option == null){
+                option = defaultOption;
+            }
+            return option;
+        };
+    }
 }

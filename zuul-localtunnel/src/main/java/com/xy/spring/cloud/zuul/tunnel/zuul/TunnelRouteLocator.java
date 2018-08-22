@@ -28,9 +28,11 @@ public class TunnelRouteLocator extends SimpleRouteLocator
 
     private ClientManager clientManager;
 
-    public TunnelRouteLocator(String servletPath, ZuulProperties properties,
-                              ZuulTunnelProperties zuulTunnelProperties,
-                              ClientManager clientManager) {
+    public TunnelRouteLocator(
+            String servletPath,
+            ZuulProperties properties,
+            ZuulTunnelProperties zuulTunnelProperties,
+            ClientManager clientManager) {
         super(servletPath, properties);
         this.properties = properties;
         this.zuulTunnelProperties = zuulTunnelProperties;
@@ -43,12 +45,21 @@ public class TunnelRouteLocator extends SimpleRouteLocator
         logger.debug("Refresh routes and tunnels!");
         doRefresh();
         tunnelRoutes.set(new HashSet<>(zuulTunnelProperties.getSockets().keySet()));
+
+        //refresh options by configure it again
+        clientManager.getOptionProvider().configure();
     }
 
     public boolean isTunnelRoute(String id){
         return tunnelRoutes.get().contains(id);
     }
 
+    /**
+     * TODO support option from request
+     * @param id route id
+     * @param path route path
+     * @param location route target location
+     */
     public void addTunnelRoute(String id, String path, String location) {
         logger.debug("Add route '{}' and flag it to tunnel!", id);
         ZuulProperties.ZuulRoute zuulRoute = new ZuulProperties.ZuulRoute(path, location);
@@ -57,7 +68,7 @@ public class TunnelRouteLocator extends SimpleRouteLocator
 
         ZuulTunnelProperties.TunnelSocket tunnelSocket = new ZuulTunnelProperties.TunnelSocket();
         tunnelSocket.setId(id);
-        zuulTunnelProperties.getSockets().put(id, tunnelSocket);
+        zuulTunnelProperties.getSockets().putIfAbsent(id,tunnelSocket);
     }
 
     @Override

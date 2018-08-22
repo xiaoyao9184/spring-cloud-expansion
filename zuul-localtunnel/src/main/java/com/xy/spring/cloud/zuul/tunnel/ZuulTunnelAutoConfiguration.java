@@ -6,6 +6,7 @@ import com.xy.spring.cloud.zuul.tunnel.actuate.TunnelMvcEndpoint;
 import com.xy.spring.cloud.zuul.tunnel.apachel.TunnelApacheHttpClientConnectionManagerFactory;
 import com.xy.spring.cloud.zuul.tunnel.apachel.TunnelPlainConnectionSocketFactory;
 import com.xy.spring.cloud.zuul.tunnel.localtunnel.ClientManager;
+import com.xy.spring.cloud.zuul.tunnel.localtunnel.DefaultOptionProvider;
 import com.xy.spring.cloud.zuul.tunnel.zuul.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.condition.ConditionalOnEnabledEndpoint;
@@ -26,11 +27,6 @@ import org.springframework.context.annotation.Lazy;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.AbstractMap;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static com.xy.spring.cloud.zuul.tunnel.localtunnel.ClientManager.DEFAULT_OPTION;
 
 /**
  * Created by xiaoyao9184 on 2018/8/7.
@@ -41,27 +37,14 @@ import static com.xy.spring.cloud.zuul.tunnel.localtunnel.ClientManager.DEFAULT_
 public class ZuulTunnelAutoConfiguration {
 
 
-    public Map<String,ClientManager.Option> mapOptions (Map<String, ZuulTunnelProperties.TunnelSocket> routeMap){
-        return routeMap.values().stream()
-                .map(tunnelSocket -> {
-                    ClientManager.Option option = new ClientManager.Option();
-                    option.setPort(tunnelSocket.getPort());
-                    option.setMaxTcpSockets(tunnelSocket.getMaxConnCount() == null ?
-                            DEFAULT_OPTION.getMaxTcpSockets() : tunnelSocket.getMaxConnCount());
-                    option.setInitTcpSockets(tunnelSocket.getConnCount() == null ?
-                            DEFAULT_OPTION.getInitTcpSockets() : tunnelSocket.getConnCount());
-                    option.setAcceptRepeat(tunnelSocket.getAcceptRepeat() == null ?
-                            DEFAULT_OPTION.getAcceptRepeat() : tunnelSocket.getAcceptRepeat());
-                    return new AbstractMap.SimpleEntry<>(tunnelSocket.getId(),option);
-                })
-                .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
-    }
-
     @Bean
     public ClientManager clientManager(
             @Autowired ZuulTunnelProperties zuulTunnelProperties
     ) throws IOException {
-        return new ClientManager(mapOptions(zuulTunnelProperties.getSockets()));
+        DefaultOptionProvider optionProvider =  new DefaultOptionProvider();
+        optionProvider.setConfigurator((p) -> p.init(zuulTunnelProperties.getSockets()));
+        //if will lazy configure when refresh route locator
+        return new ClientManager(optionProvider);
     }
 
 
