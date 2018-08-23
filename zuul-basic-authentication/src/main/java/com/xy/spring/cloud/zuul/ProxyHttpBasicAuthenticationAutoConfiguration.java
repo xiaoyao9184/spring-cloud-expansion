@@ -1,8 +1,6 @@
 package com.xy.spring.cloud.zuul;
 
-import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
+import org.springframework.boot.autoconfigure.condition.*;
 import org.springframework.boot.bind.RelaxedPropertyResolver;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.netflix.zuul.EnableZuulProxy;
@@ -26,11 +24,22 @@ public class ProxyHttpBasicAuthenticationAutoConfiguration {
 
     @Bean
     @Conditional(PropertySetCondition.class)
+    public HttpBasicAuthenticationProvider httpBasicAuthenticationProvider(
+            HttpBasicAuthenticationProperties properties) {
+        DefaultHttpBasicAuthenticationProvider provider = new DefaultHttpBasicAuthenticationProvider((p) -> {
+            p.setCache(properties.getBasics());
+        });
+        provider.configure();
+        return provider;
+    }
+
+    @Bean
+    @ConditionalOnBean(HttpBasicAuthenticationProvider.class)
     public HttpBasicAuthenticationPreZuulFilter httpBasicAuthenticationPreZuulFilter(
             ProxyAuthenticationProperties properties,
-            HttpBasicAuthenticationProperties basicAuthenticationProperties) {
+            HttpBasicAuthenticationProvider provider) {
         ProxyRequestHelper helper = new ProxyRequestHelper();
-        return new HttpBasicAuthenticationPreZuulFilter(helper, properties, basicAuthenticationProperties);
+        return new HttpBasicAuthenticationPreZuulFilter(helper, properties, provider);
     }
 
     public static class PropertySetCondition extends SpringBootCondition {

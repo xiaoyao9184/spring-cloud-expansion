@@ -15,37 +15,14 @@ public class HttpBasicAuthenticationProperties {
 
     public static final String PROPERTIE_MAIN = "proxy.auth.basics";
 
-    private Map<String, Item> basics = new HashMap<String, Item>();
+    private Map<String, HttpBasicAuthenticationProvider.RouteUsernamePassword> basics = new HashMap<String, HttpBasicAuthenticationProvider.RouteUsernamePassword>();
 
-    public Map<String, Item> getBasics() {
+    public Map<String, HttpBasicAuthenticationProvider.RouteUsernamePassword> getBasics() {
         return basics;
     }
 
-    public void setBasics(Map<String, Item> basics) {
+    public void setBasics(Map<String, HttpBasicAuthenticationProvider.RouteUsernamePassword> basics) {
         this.basics = basics;
     }
-
-
-    public static class Item {
-        private String username;
-        private String password;
-
-        public String getUsername() {
-            return username;
-        }
-
-        public void setUsername(String username) {
-            this.username = username;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
-    }
-
 
 }

@@ -26,10 +26,10 @@ public class HttpBasicAuthenticationPreZuulFilter extends ZuulFilter {
     public HttpBasicAuthenticationPreZuulFilter(
             ProxyRequestHelper helper,
             ProxyAuthenticationProperties properties,
-            HttpBasicAuthenticationProperties basicAuthenticationProperties){
+            HttpBasicAuthenticationProvider provider){
         this.helper = helper;
         this.routes = properties.getRoutes();
-        this.tokens = basicAuthenticationProperties.getBasics().entrySet().stream()
+        this.tokens = provider.provide().entrySet().stream()
                 .map(kv -> {
                     if(kv.getValue() == null){
                         return null;
