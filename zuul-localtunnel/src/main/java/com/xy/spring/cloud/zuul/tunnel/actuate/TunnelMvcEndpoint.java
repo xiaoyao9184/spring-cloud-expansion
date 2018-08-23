@@ -13,7 +13,7 @@ import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -77,8 +77,9 @@ public class TunnelMvcEndpoint extends EndpointMvcAdapter implements Application
         }
 
         //Init or get client info
-        String routePath = UriComponentsBuilder.fromHttpUrl(request.getRequestURL().toString())
-                .replacePath(routePrefix + "/" + name)
+        String routePath = ServletUriComponentsBuilder.fromContextPath(request)
+                .path(routePrefix)
+                .pathSegment(name)
                 .build()
                 .toString();
         return ResponseEntity.ok(delegate.getOrInitClient(name, routePath));
