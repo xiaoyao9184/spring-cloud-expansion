@@ -100,9 +100,6 @@ public class ZuulTunnelAutoConfiguration {
         private ZuulTunnelProperties zuulTunnelProperties;
 
         @Autowired
-        private RouteLocator routeLocator;
-
-        @Autowired
         private ClientManager clientManager;
 
         @Autowired
@@ -110,10 +107,7 @@ public class ZuulTunnelAutoConfiguration {
 
 
         @Bean
-        public TunnelRouteLocator tunnelRouteLocator(
-                @Autowired ServerProperties server,
-                @Autowired ClientManager clientManager
-        ){
+        public TunnelRouteLocator tunnelRouteLocator(ServerProperties server){
             TunnelRouteLocator locator = new TunnelRouteLocator(
                     server.getServletPrefix(),
                     zuulProperties,
@@ -132,7 +126,7 @@ public class ZuulTunnelAutoConfiguration {
         }
 
         @Bean
-        public InitTunnelFilter initTunnelFilter() throws MalformedURLException {
+        public InitTunnelFilter initTunnelFilter(RouteLocator routeLocator) throws MalformedURLException {
             InitTunnelFilter filter = new InitTunnelFilter();
             filter.setZuulProperties(zuulProperties);
             filter.setZuulTunnelProperties(zuulTunnelProperties);
