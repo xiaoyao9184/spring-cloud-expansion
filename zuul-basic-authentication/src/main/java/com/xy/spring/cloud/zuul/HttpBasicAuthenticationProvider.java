@@ -1,5 +1,8 @@
 package com.xy.spring.cloud.zuul;
 
+import org.springframework.util.Base64Utils;
+import org.springframework.util.StringUtils;
+
 import java.util.Map;
 
 /**
@@ -8,6 +11,8 @@ import java.util.Map;
 public interface HttpBasicAuthenticationProvider {
 
     void configure();
+
+    boolean canProvide(String name);
 
     Map<String,RouteUsernamePassword> provide();
 
@@ -20,6 +25,28 @@ public interface HttpBasicAuthenticationProvider {
         }
         return option;
     };
+
+    default String provideToken(String name) {
+        RouteUsernamePassword rup = provide(name);
+        String username = rup.getUsername();
+        String password = rup.getPassword();
+        if(StringUtils.isEmpty(username)
+                || StringUtils.isEmpty(password)){
+            return null;
+        }
+        String temp = username + ":" + password;
+        byte[] bytes = temp.getBytes();
+        return "Basic " + Base64Utils.encodeToString(bytes);
+    };
+
+    default String provideTokenOrDefault(String name, String token) {
+        String option = provideToken(name);
+        if(option == null){
+            option = token;
+        }
+        return option;
+    };
+
 
     class RouteUsernamePassword {
 
