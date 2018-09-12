@@ -90,6 +90,10 @@ public class TunnelRouteLocator extends SimpleRouteLocator
             for (String clientId : tunnels) {
                 // Ignore specifically ignored tunnels and those that were manually
                 // configured
+                /**
+                 * path and location generate same like TunnelMvcEndpoint
+                 * @see com.xy.spring.cloud.zuul.tunnel.actuate.TunnelMvcEndpoint
+                 */
                 String path = "/" + clientId + "/**";
                 if (staticTunnel.containsKey(clientId)
                         && staticTunnel.get(clientId).getUrl() == null) {
@@ -98,7 +102,7 @@ public class TunnelRouteLocator extends SimpleRouteLocator
                     // Update location using clientId if location is null
                     ZuulProperties.ZuulRoute staticRoute = staticTunnel.get(clientId);
                     if (!StringUtils.hasText(staticRoute.getLocation())) {
-                        staticRoute.setLocation(zuulTunnelProperties.getRouteHost());
+                        staticRoute.setLocation(zuulTunnelProperties.getLocationPrefix() + clientId);
                     }
                 }
                 if (!PatternMatchUtils.simpleMatch(ignored, clientId)

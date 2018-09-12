@@ -14,12 +14,15 @@ import java.util.Map;
 )
 public class ZuulTunnelProperties {
 
-    public static final String TUNNEL_SERVICE_ID =  "0.0.0.0";
+    public static final String TUNNEL_FLAG =  "tunnel://";
 
-    public static final String NO_EXIST_HOST = "http://127.0.0.0";
+    //TODO maybe use template like this 'http://www.{}.com:00/'
+    //use ':00' for tunnel pattern and replace empty
+    private String locationPrefix = TUNNEL_FLAG;
 
-    private String serviceId = TUNNEL_SERVICE_ID;
-    private String routeHost = NO_EXIST_HOST;
+    private String locationPattern = TUNNEL_FLAG;
+    private String locationReplacement = "http://";
+
     private Map<String, TunnelSocket> sockets = new HashMap<String, TunnelSocket>();
 
 
@@ -32,20 +35,43 @@ public class ZuulTunnelProperties {
         }
     }
 
-    public String getServiceId() {
-        return serviceId;
+    public String getLocationPrefix() {
+        return locationPrefix;
     }
 
-    public void setServiceId(String serviceId) {
-        this.serviceId = serviceId;
+    /**
+     * location prefix for dynamic addition
+     * @see com.xy.spring.cloud.zuul.tunnel.actuate.TunnelMvcEndpoint
+     * @param locationPrefix
+     */
+    public void setLocationPrefix(String locationPrefix) {
+        this.locationPrefix = locationPrefix;
     }
 
-    public String getRouteHost() {
-        return routeHost;
+    public String getLocationPattern() {
+        return locationPattern;
     }
 
-    public void setRouteHost(String routeHost) {
-        this.routeHost = routeHost;
+    /**
+     * location pattern for 'Matched' tunnel route
+     * @see com.xy.spring.cloud.zuul.tunnel.zuul.PreDecorationTunnelFilter
+     * @param locationPattern
+     */
+    public void setLocationPattern(String locationPattern) {
+        this.locationPattern = locationPattern;
+    }
+
+    public String getLocationReplacement() {
+        return locationReplacement;
+    }
+
+    /**
+     * location replacement for 'Matched' tunnel route
+     * @see com.xy.spring.cloud.zuul.tunnel.zuul.PreDecorationTunnelFilter
+     * @param locationReplacement
+     */
+    public void setLocationReplacement(String locationReplacement) {
+        this.locationReplacement = locationReplacement;
     }
 
     public Map<String, TunnelSocket> getSockets() {

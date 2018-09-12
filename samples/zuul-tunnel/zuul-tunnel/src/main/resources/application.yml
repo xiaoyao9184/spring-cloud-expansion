@@ -16,7 +16,7 @@ zuul:
   routes:
     fuckup:
       path: /fuckup/**
-      url: 0.0.0.0
+      url: tunnel://fuckup.me
     httpbin:
       path: /httpbin/**
       url: http://httpbin.org

@@ -120,8 +120,8 @@ public class ZuulTunnelAutoConfiguration {
         @Bean
         public PreDecorationTunnelFilter preTunnelFilter(TunnelRouteLocator tunnelRouteLocator) {
             PreDecorationTunnelFilter filter = new PreDecorationTunnelFilter(tunnelRouteLocator);
-            filter.setTunnelServiceId(zuulTunnelProperties.getServiceId());
-            filter.setTunnelRouteHost(zuulTunnelProperties.getRouteHost());
+            filter.setTunnelLocationPattern(zuulTunnelProperties.getLocationPattern());
+            filter.setTunnelLocationReplacement(zuulTunnelProperties.getLocationReplacement());
             return filter;
         }
 
@@ -159,7 +159,7 @@ public class ZuulTunnelAutoConfiguration {
             return new TunnelMvcEndpoint(
                     tunnelEndpoint,
                     tunnelRouteLocator,
-                    zuulTunnelProperties.getServiceId(),
+                    zuulTunnelProperties.getLocationPrefix(),
                     zuulProperties.getPrefix());
         }
     }
