@@ -87,7 +87,6 @@ public class PreDecorationTunnelFilter extends ZuulFilter {
     @Override
     public Object run() {
         RequestContext ctx = RequestContext.getCurrentContext();
-        String proxy = ctx.getOrDefault(PROXY_KEY,"").toString();
         //flag it is tunnel route
         ctx.set(TUNNEL_KEY,true);
 

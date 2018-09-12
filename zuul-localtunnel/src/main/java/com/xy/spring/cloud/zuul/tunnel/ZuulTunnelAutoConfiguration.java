@@ -159,7 +159,7 @@ public class ZuulTunnelAutoConfiguration {
             return new TunnelMvcEndpoint(
                     tunnelEndpoint,
                     tunnelRouteLocator,
-                    zuulTunnelProperties.getLocationPrefix(),
+                    zuulTunnelProperties.getLocationTemplate(),
                     zuulProperties.getPrefix());
         }
     }

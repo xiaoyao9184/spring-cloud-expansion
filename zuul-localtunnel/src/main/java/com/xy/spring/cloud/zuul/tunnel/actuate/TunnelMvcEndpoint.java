@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -37,12 +38,12 @@ public class TunnelMvcEndpoint extends EndpointMvcAdapter implements Application
 
     public TunnelMvcEndpoint(TunnelEndpoint delegate,
                              TunnelRouteLocator tunnelRouteLocator,
-                             String routeLocationPrefix,
+                             String routeLocationTemplate,
                              String routePrefix) {
         super(delegate);
         this.delegate = delegate;
         this.tunnelRouteLocator = tunnelRouteLocator;
-        this.routeLocationPrefix = routeLocationPrefix;
+        this.routeLocationPrefix = routeLocationTemplate;
         this.routePrefix = routePrefix;
     }
 
@@ -69,7 +70,10 @@ public class TunnelMvcEndpoint extends EndpointMvcAdapter implements Application
             //
             logger.debug("Tunnel zuul route '{}' not find need create!", name);
             //Add route
-            tunnelRouteLocator.addTunnelRoute(name, "/" + name + "/**", routeLocationPrefix + name);
+            String location = UriComponentsBuilder.fromUriString(routeLocationPrefix)
+                    .buildAndExpand(name)
+                    .toUriString();
+            tunnelRouteLocator.addTunnelRoute(name, "/" + name + "/**", location);
             //Refreshed event
             publisher.publishEvent(new RoutesRefreshedEvent(tunnelRouteLocator));
         }else{

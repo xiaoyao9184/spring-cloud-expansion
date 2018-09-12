@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cloud.netflix.zuul.filters.*;
 import org.springframework.util.PatternMatchUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -102,7 +103,10 @@ public class TunnelRouteLocator extends SimpleRouteLocator
                     // Update location using clientId if location is null
                     ZuulProperties.ZuulRoute staticRoute = staticTunnel.get(clientId);
                     if (!StringUtils.hasText(staticRoute.getLocation())) {
-                        staticRoute.setLocation(zuulTunnelProperties.getLocationPrefix() + clientId);
+                        String location = UriComponentsBuilder.fromUriString(zuulTunnelProperties.getLocationTemplate())
+                                .buildAndExpand(clientId)
+                                .toUriString();
+                        staticRoute.setLocation(location);
                     }
                 }
                 if (!PatternMatchUtils.simpleMatch(ignored, clientId)

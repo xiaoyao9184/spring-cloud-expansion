@@ -16,9 +16,10 @@ public class ZuulTunnelProperties {
 
     public static final String TUNNEL_FLAG =  "tunnel://";
 
-    //TODO maybe use template like this 'http://www.{}.com:00/'
-    //use ':00' for tunnel pattern and replace empty
-    private String locationPrefix = TUNNEL_FLAG;
+    //Implicit tunnel route use port 00
+    //you can use template like this 'http://www.{}.com:00/'
+    //use ':00' for tunnel pattern and empty replacement
+    private String locationTemplate = TUNNEL_FLAG + "{id}";
 
     private String locationPattern = TUNNEL_FLAG;
     private String locationReplacement = "http://";
@@ -35,17 +36,17 @@ public class ZuulTunnelProperties {
         }
     }
 
-    public String getLocationPrefix() {
-        return locationPrefix;
+    public String getLocationTemplate() {
+        return locationTemplate;
     }
 
     /**
      * location prefix for dynamic addition
      * @see com.xy.spring.cloud.zuul.tunnel.actuate.TunnelMvcEndpoint
-     * @param locationPrefix
+     * @param locationTemplate
      */
-    public void setLocationPrefix(String locationPrefix) {
-        this.locationPrefix = locationPrefix;
+    public void setLocationTemplate(String locationTemplate) {
+        this.locationTemplate = locationTemplate;
     }
 
     public String getLocationPattern() {
