@@ -15,6 +15,7 @@ import java.util.Map;
 public class ZuulTunnelProperties {
 
     public static final String TUNNEL_FLAG =  "tunnel://";
+    public static final String PROPERTIE_AUTO_RELEASE_SOCKET = "proxy.tunnel.autoReleaseSocket";
 
     //Implicit tunnel route use port 00
     //you can use template like this 'http://www.{}.com:00/'
@@ -23,6 +24,8 @@ public class ZuulTunnelProperties {
 
     private String locationPattern = TUNNEL_FLAG;
     private String locationReplacement = "http://";
+
+    private boolean autoReleaseSocket = true;
 
     private Map<String, TunnelSocket> sockets = new HashMap<String, TunnelSocket>();
 
@@ -75,10 +78,28 @@ public class ZuulTunnelProperties {
         this.locationReplacement = locationReplacement;
     }
 
+    public boolean isAutoReleaseSocket() {
+        return autoReleaseSocket;
+    }
+
+    /**
+     * auto consume connections of the tunnel socket to apache http client pool
+     * @see com.xy.spring.cloud.zuul.tunnel.apache.AutoReleaseConnectionSocketApplicationListener
+     * @param autoReleaseSocket
+     */
+    public void setAutoReleaseSocket(boolean autoReleaseSocket) {
+        this.autoReleaseSocket = autoReleaseSocket;
+    }
+
     public Map<String, TunnelSocket> getSockets() {
         return sockets;
     }
 
+    /**
+     * each tunnel route can be set default socket option
+     * @see com.xy.spring.cloud.zuul.tunnel.localtunnel.ClientManager.Option
+     * @param sockets
+     */
     public void setSockets(Map<String, TunnelSocket> sockets) {
         this.sockets = sockets;
     }

@@ -80,7 +80,7 @@ public class ZuulRequestContextPassThroughHttpClientConfiguration implements Bea
                                     HttpHost.class, HttpRequest.class, HttpContext.class);
                     return ReflectionUtils
                             .invokeMethod(method, invocation.getThis(),
-                                    invocation.getArguments()[0], invocation.getArguments()[1],context);
+                                    invocation.getArguments()[0], invocation.getArguments()[1], context);
                 }
             }
             return invocation.proceed();

@@ -123,6 +123,10 @@ Now your tunnel-zuul gateway will proxy iis service(localhost:80) by use route '
 proxy data pack through tunnel-zuul's port 2333 to iis's port 80
 
 
+**ISSUE NOTE** TCP FIN status connection will not be closed if not used, 
+use keep alive connection to avoid problems, but localtunnel not support it local point not support.
+BIO cant catch socket end event if not read it! go fxxx them!
+
 
 
 ## zuul-outer-redirect

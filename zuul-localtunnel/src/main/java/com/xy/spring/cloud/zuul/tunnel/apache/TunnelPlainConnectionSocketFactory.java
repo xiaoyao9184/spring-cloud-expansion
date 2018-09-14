@@ -1,4 +1,4 @@
-package com.xy.spring.cloud.zuul.tunnel.apachel;
+package com.xy.spring.cloud.zuul.tunnel.apache;
 
 import com.netflix.zuul.context.RequestContext;
 import com.xy.spring.cloud.zuul.tunnel.localtunnel.Client;
@@ -9,6 +9,7 @@ import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.protocol.HttpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -29,22 +30,31 @@ public class TunnelPlainConnectionSocketFactory extends PlainConnectionSocketFac
 
     @Override
     public Socket createSocket(HttpContext httpContext) throws IOException {
+        String clientId = null;
+        //use zuul attribute for clientId
         Object contextAttribute = httpContext.getAttribute("zuul.request-context");
         if(contextAttribute instanceof RequestContext){
             RequestContext context = (RequestContext) contextAttribute;
             logger.debug("Found zuul RequestContext in HttpContext!");
-            String clientId = context.get("proxy").toString();
-            Client client = clientManager.getClient(clientId);
-            if(client != null){
-                logger.debug("Use tunnel client '{}' socket!", clientId);
-                Socket socket = client.getAgent().pullConnection();
-                if(socket != null){
-                    return socket;
-                }
-                logger.debug("Tunnel client '{}' cant available any socket!", clientId);
-            }
-            logger.debug("Cant find tunnel client '{}' socket!", clientId);
+            clientId = context.get("proxy").toString();
         }
+        //use tunnel id for clientId
+        String tunnelId = (String) httpContext.getAttribute("tunnel.id");
+        if(!StringUtils.isEmpty(tunnelId)){
+            clientId = tunnelId;
+        }
+
+        Client client = clientManager.getClient(clientId);
+        if(client != null){
+            logger.debug("Use tunnel client '{}' socket!", clientId);
+            Socket socket = client.getAgent().pullConnection();
+            if(socket != null){
+                return socket;
+            }
+            logger.debug("Tunnel client '{}' cant available any socket!", clientId);
+        }
+        logger.debug("Cant find tunnel client '{}' socket!", clientId);
+
         logger.debug("Create socket use normal way!");
         return super.createSocket(httpContext);
     }

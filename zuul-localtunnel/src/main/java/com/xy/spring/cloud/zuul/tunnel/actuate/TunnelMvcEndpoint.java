@@ -32,7 +32,7 @@ public class TunnelMvcEndpoint extends EndpointMvcAdapter implements Application
 
     private TunnelRouteLocator tunnelRouteLocator;
 
-    private String routeLocationPrefix;
+    private String routeLocationTemplate;
 
     private ApplicationEventPublisher publisher;
 
@@ -43,7 +43,7 @@ public class TunnelMvcEndpoint extends EndpointMvcAdapter implements Application
         super(delegate);
         this.delegate = delegate;
         this.tunnelRouteLocator = tunnelRouteLocator;
-        this.routeLocationPrefix = routeLocationTemplate;
+        this.routeLocationTemplate = routeLocationTemplate;
         this.routePrefix = routePrefix;
     }
 
@@ -70,7 +70,7 @@ public class TunnelMvcEndpoint extends EndpointMvcAdapter implements Application
             //
             logger.debug("Tunnel zuul route '{}' not find need create!", name);
             //Add route
-            String location = UriComponentsBuilder.fromUriString(routeLocationPrefix)
+            String location = UriComponentsBuilder.fromUriString(routeLocationTemplate)
                     .buildAndExpand(name)
                     .toUriString();
             tunnelRouteLocator.addTunnelRoute(name, "/" + name + "/**", location);

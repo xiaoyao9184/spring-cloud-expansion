@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
@@ -16,6 +17,7 @@ public class ClientManager {
 
     private static Logger logger = LoggerFactory.getLogger(ClientManager.class);
 
+    private EventHandler eventHandler;
     private OptionProvider optionProvider;
     private Map<String,Client> clients;
     private Statistics stats;
@@ -35,9 +37,20 @@ public class ClientManager {
         initSelector();
     }
 
+
+    public ClientManager(EventHandler handler, OptionProvider provider) throws IOException {
+        this.eventHandler = handler;
+        this.optionProvider = provider;
+        this.clients = new HashMap<>();
+        this.stats = new Statistics();
+
+        initSelector();
+    }
+
     private void initSelector() throws IOException {
         this.selector = Selector.open();
         this.socketAcceptHandler = new TunnelAgent.SelectorSocketAcceptHandler(selector,selectorLock);
+        this.socketAcceptHandler.setEventHandler(eventHandler);
         this.socketAcceptThread = new Thread(socketAcceptHandler,"tunnel-socket-accept-select");
         this.socketAcceptThread.start();
     }
@@ -85,6 +98,7 @@ public class ClientManager {
         }
 
         TunnelAgent agent = new TunnelAgent(
+                id,
                 option.getMaxTcpSockets(),
                 selector,
                 selectorLock
@@ -235,5 +249,63 @@ public class ClientManager {
             }
             return option;
         };
+    }
+
+
+
+
+    public static class TunnelEvent {
+
+        private String id;
+        private EventCode code;
+        private Client client;
+        private SocketChannel channel;
+
+        public TunnelEvent(String id, EventCode code){
+            this.id = id;
+            this.code = code;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public EventCode getCode() {
+            return code;
+        }
+
+        public void setCode(EventCode code) {
+            this.code = code;
+        }
+
+        public Client getClient() {
+            return client;
+        }
+
+        public void setClient(Client client) {
+            this.client = client;
+        }
+
+        public SocketChannel getChannel() {
+            return channel;
+        }
+
+        public void setChannel(SocketChannel channel) {
+            this.channel = channel;
+        }
+    }
+
+    public enum EventCode {
+        Acceptable
+    }
+
+    public interface EventHandler {
+
+        void acceptable(String id, SocketChannel socketChannel);
+
     }
 }

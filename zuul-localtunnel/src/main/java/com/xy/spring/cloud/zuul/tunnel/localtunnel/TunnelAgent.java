@@ -7,10 +7,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.*;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -19,6 +16,8 @@ import java.util.concurrent.locks.ReentrantLock;
 public class TunnelAgent {
 
     private static Logger logger = LoggerFactory.getLogger(TunnelAgent.class);
+
+    private final String id;
 
     // sockets we can hand out via pullConnection
     private Queue<Socket> availableSockets;
@@ -39,12 +38,14 @@ public class TunnelAgent {
 
     /**
      *
+     * @param id
      * @param maxTcpSockets
      * @param selector
      * @param selectorLock
      * @throws IOException
      */
-    public TunnelAgent(Integer maxTcpSockets, Selector selector, ReentrantLock selectorLock) throws IOException {
+    public TunnelAgent(String id, Integer maxTcpSockets, Selector selector, ReentrantLock selectorLock) throws IOException {
+        this.id = id;
         this.availableSockets = new LinkedList<>();
 
         this.connectedSockets = 0;
@@ -52,6 +53,26 @@ public class TunnelAgent {
         this.channel = ServerSocketChannel.open();
         this.selector = selector;
         this.lock = selectorLock;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public Integer getConnectedSockets() {
+        return connectedSockets;
+    }
+
+    public Integer getMaxTcpSockets() {
+        return maxTcpSockets;
+    }
+
+    public Boolean getStarted() {
+        return started;
+    }
+
+    public Boolean getClosed() {
+        return closed;
     }
 
     /**
@@ -143,9 +164,17 @@ public class TunnelAgent {
         private Selector selector;
         private ReentrantLock lock;
 
+
+        private Optional<ClientManager.EventHandler> eventHandler;
+
+
         public SelectorSocketAcceptHandler(Selector selector, ReentrantLock lock){
             this.selector = selector;
             this.lock = lock;
+        }
+
+        public void setEventHandler(ClientManager.EventHandler eventHandler) {
+            this.eventHandler = Optional.of(eventHandler);
         }
 
         public void run() {
@@ -167,7 +196,13 @@ public class TunnelAgent {
                         if(key.isAcceptable()) {
                             ServerSocketChannel channel = (ServerSocketChannel) key.channel();
                             TunnelAgent agent = (TunnelAgent) key.attachment();
-                            agent.pushConnection(channel.accept().socket());
+                            //push channel to tunnel pool
+                            SocketChannel socketChannel = channel.accept();
+                            agent.pushConnection(socketChannel.socket());
+                            //new socket event
+                            eventHandler.ifPresent(e -> {
+                                e.acceptable(agent.getId(), socketChannel);
+                            });
                         }
                         keyIterator.remove();
                     }

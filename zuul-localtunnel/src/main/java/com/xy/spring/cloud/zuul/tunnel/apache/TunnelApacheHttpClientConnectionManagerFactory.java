@@ -1,4 +1,4 @@
-package com.xy.spring.cloud.zuul.tunnel.apachel;
+package com.xy.spring.cloud.zuul.tunnel.apache;
 
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionManager;

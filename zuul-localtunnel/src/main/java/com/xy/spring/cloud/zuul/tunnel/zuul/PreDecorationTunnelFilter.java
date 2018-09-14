@@ -14,6 +14,7 @@ import static com.xy.spring.cloud.zuul.tunnel.ZuulTunnelProperties.TUNNEL_FLAG;
 import static org.springframework.cloud.netflix.zuul.filters.support.FilterConstants.*;
 
 /**
+ * Specified route is tunnel, replacement tunnel location to http location
  * Created by xiaoyao9184 on 2018/8/8.
  */
 public class PreDecorationTunnelFilter extends ZuulFilter {
@@ -98,8 +99,7 @@ public class PreDecorationTunnelFilter extends ZuulFilter {
             //tunnel route not support service mode
             ctx.remove(SERVICE_ID_KEY);
 
-            Matcher matcher = pattern.matcher(location);
-            location = matcher.replaceAll(tunnelLocationReplacement);
+            location = replacement(location);
 
             try {
                 ctx.setRouteHost(new URL(location));
@@ -126,5 +126,10 @@ public class PreDecorationTunnelFilter extends ZuulFilter {
             logger.debug("The zuul route '{}' location from host!", proxy);
         }
         return location;
+    }
+
+    public String replacement(String location) {
+        Matcher matcher = pattern.matcher(location);
+        return matcher.replaceAll(tunnelLocationReplacement);
     }
 }

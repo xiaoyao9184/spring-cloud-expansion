@@ -3,11 +3,19 @@ package com.xy.spring.cloud.zuul.tunnel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xy.spring.cloud.zuul.tunnel.actuate.TunnelEndpoint;
 import com.xy.spring.cloud.zuul.tunnel.actuate.TunnelMvcEndpoint;
-import com.xy.spring.cloud.zuul.tunnel.apachel.TunnelApacheHttpClientConnectionManagerFactory;
-import com.xy.spring.cloud.zuul.tunnel.apachel.TunnelPlainConnectionSocketFactory;
+import com.xy.spring.cloud.zuul.tunnel.apache.AutoReleaseConnectionSocketApplicationListener;
+import com.xy.spring.cloud.zuul.tunnel.apache.TunnelApacheHttpClientConnectionManagerFactory;
+import com.xy.spring.cloud.zuul.tunnel.apache.TunnelPlainConnectionSocketFactory;
 import com.xy.spring.cloud.zuul.tunnel.localtunnel.ClientManager;
+import com.xy.spring.cloud.zuul.tunnel.localtunnel.DefaultEventHandler;
 import com.xy.spring.cloud.zuul.tunnel.localtunnel.DefaultOptionProvider;
-import com.xy.spring.cloud.zuul.tunnel.zuul.*;
+import com.xy.spring.cloud.zuul.tunnel.zuul.InitTunnelFilter;
+import com.xy.spring.cloud.zuul.tunnel.zuul.PreDecorationTunnelFilter;
+import com.xy.spring.cloud.zuul.tunnel.zuul.TunnelRouteLocator;
+import com.xy.spring.cloud.zuul.tunnel.zuul.ZuulRequestContextPassThroughHttpClientConfiguration;
+import org.apache.http.HttpHost;
+import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.conn.routing.HttpRoute;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.condition.ConditionalOnEnabledEndpoint;
 import org.springframework.boot.actuate.endpoint.Endpoint;
@@ -18,15 +26,22 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cloud.commons.httpclient.ApacheHttpClientFactory;
 import org.springframework.cloud.commons.httpclient.DefaultApacheHttpClientFactory;
 import org.springframework.cloud.netflix.zuul.EnableZuulProxy;
+import org.springframework.cloud.netflix.zuul.filters.Route;
 import org.springframework.cloud.netflix.zuul.filters.RouteLocator;
 import org.springframework.cloud.netflix.zuul.filters.ZuulProperties;
+import org.springframework.cloud.netflix.zuul.filters.route.SimpleHostRoutingFilter;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.util.ReflectionUtils;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
+
+import static com.xy.spring.cloud.zuul.tunnel.ZuulTunnelProperties.PROPERTIE_AUTO_RELEASE_SOCKET;
 
 /**
  * Created by xiaoyao9184 on 2018/8/7.
@@ -39,12 +54,18 @@ public class ZuulTunnelAutoConfiguration {
 
     @Bean
     public ClientManager clientManager(
-            @Autowired ZuulTunnelProperties zuulTunnelProperties
+            @Autowired ZuulTunnelProperties zuulTunnelProperties,
+            @Autowired ApplicationContext applicationContext
     ) throws IOException {
         DefaultOptionProvider optionProvider =  new DefaultOptionProvider();
         optionProvider.setConfigurator((p) -> p.init(zuulTunnelProperties.getSockets()));
         //if will lazy configure when refresh route locator
-        return new ClientManager(optionProvider);
+
+        //publish tunnel event to application
+        DefaultEventHandler eventHandler = new DefaultEventHandler((e) -> {
+            applicationContext.publishEvent(AutoReleaseConnectionSocketApplicationListener.ApplicationTunnelEvent.to(e));
+        });
+        return new ClientManager(eventHandler,optionProvider);
     }
 
 
@@ -134,6 +155,53 @@ public class ZuulTunnelAutoConfiguration {
             filter.setClientManager(clientManager);
             filter.setObjectMapper(objectMapper);
             return filter;
+        }
+
+
+        /**
+         * location apache http route by zuul proxy route
+         * @param preDecorationTunnelFilter use this for replacement route location
+         * @param tunnelRouteLocator
+         * @return
+         */
+        @Bean
+        @ConditionalOnProperty(name = PROPERTIE_AUTO_RELEASE_SOCKET, havingValue = "true", matchIfMissing = true)
+        public AutoReleaseConnectionSocketApplicationListener.HttpRouteLocator httpRouteLocator(
+                PreDecorationTunnelFilter preDecorationTunnelFilter,
+                TunnelRouteLocator tunnelRouteLocator
+        ){
+            return id -> tunnelRouteLocator.getRoutes().stream()
+                    .filter(r -> r.getId().equals(id))
+                    .findFirst()
+                    .map(Route::getLocation)
+                    .map(preDecorationTunnelFilter::replacement)
+                    .map(HttpHost::create)
+                    .map(HttpRoute::new)
+                    .orElse(null);
+        }
+
+        /**
+         * tunnel event tigger auto release
+         * @param simpleHostRoutingFilter
+         * @param locator
+         * @return
+         */
+        @Bean
+        @ConditionalOnProperty(name = PROPERTIE_AUTO_RELEASE_SOCKET, havingValue = "true", matchIfMissing = true)
+        public AutoReleaseConnectionSocketApplicationListener autoReleaseConnectionSocketApplicationListener(
+                SimpleHostRoutingFilter simpleHostRoutingFilter,
+                AutoReleaseConnectionSocketApplicationListener.HttpRouteLocator locator
+        ){
+            Field field = ReflectionUtils
+                    .findField(SimpleHostRoutingFilter.class, "connectionManager");
+            ReflectionUtils.makeAccessible(field);
+            Object connectionManager = ReflectionUtils.getField(field,simpleHostRoutingFilter);
+            HttpClientConnectionManager manager = (HttpClientConnectionManager) connectionManager;
+
+            return new AutoReleaseConnectionSocketApplicationListener(
+                    manager,
+                    locator
+            );
         }
     }
 
